@@ -55,6 +55,20 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
 
     @Override
     public void send(T msg) {
-        //IMPLEMENT IF NEEDED
+    if(msg != null && connected && !protocol.shouldTerminate()){
+        synchronized(msg){
+                try{
+                    byte[] encodedMessage = encdec.encode(msg);
+                    if(encodedMessage!=null){
+                        out.write(encodedMessage);
+                        out.flush();
+                    }
+                }
+                catch(IOException e){
+                    System.err.println("Failed to send message: " + e.getMessage());
+                    connected = false;
+                }
+            }
+        }
     }
 }
