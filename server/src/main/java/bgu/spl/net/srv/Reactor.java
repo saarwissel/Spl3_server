@@ -14,6 +14,7 @@ import java.util.function.Supplier;
 
 public class Reactor<T> implements Server<T> {
 
+    private static Reactor<?> instance; 
     private final int port;
     private final Supplier<MessagingProtocol<T>> protocolFactory;
     private final Supplier<MessageEncoderDecoder<T>> readerFactory;
@@ -33,6 +34,18 @@ public class Reactor<T> implements Server<T> {
         this.port = port;
         this.protocolFactory = protocolFactory;
         this.readerFactory = readerFactory;
+    }
+
+    @SuppressWarnings("unchecked")
+    public static synchronized <T> Reactor<T> getInstance(
+            int numThreads,
+            int port,
+            Supplier<MessagingProtocol<T>> protocolFactory,
+            Supplier<MessageEncoderDecoder<T>> readerFactory) {
+        if (instance == null) {
+            instance = new Reactor<>(numThreads, port, protocolFactory, readerFactory);
+        }
+        return (Reactor<T>) instance;
     }
 
     @Override
