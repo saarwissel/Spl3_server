@@ -12,14 +12,16 @@ public class connectionsImpl<T> implements  Connections<T> {
     private static connectionsImpl<?> instance;
 
     private ConcurrentMap<Integer, ConnectionHandler<T>> activeClients;
-    private ConcurrentMap<String, BlockingQueue <Integer>>  channels;
+    private ConcurrentMap<String, LinkedBlockingQueue <Integer>>  channels;
     String method;
+    int messageID;
 
 
     connectionsImpl(){
         this.activeClients= new ConcurrentHashMap<>();
         this.channels=new ConcurrentHashMap<>();
         method  ="";
+        this.messageID=0;
     }
     public static synchronized <T> connectionsImpl<T> getInstance() {
         if (instance == null) {
@@ -85,7 +87,7 @@ public class connectionsImpl<T> implements  Connections<T> {
             channels.put(chanel,subs); 
         }
     }
-    public ConcurrentMap<String, BlockingQueue<Integer>> getChannels() {
+    public ConcurrentMap<String, LinkedBlockingQueue<Integer>> getChannels() {
         return channels;
     }
     public ConcurrentMap<Integer, ConnectionHandler<T>> getActiveClients() {
@@ -93,5 +95,13 @@ public class connectionsImpl<T> implements  Connections<T> {
     }
     public String getMethod() {
         return method;
+    }
+
+    public int getMessageID() {
+        return messageID;
+    }
+
+    public void setMessageID() {
+        this.messageID = messageID++;
     }
 }
