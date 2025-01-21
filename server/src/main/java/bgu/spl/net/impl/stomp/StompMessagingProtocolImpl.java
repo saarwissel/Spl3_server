@@ -78,16 +78,11 @@ public class StompMessagingProtocolImpl <T>implements StompMessagingProtocol <T>
             connections.send(this.getConnectionId(), "ERROR\nmessage:ID not found: " + receipt + "\n^@");
         }
         else{
-            connections.getActiveClients().remove(receipt);
-            for (String channel : connections.getChannels().keySet()) {
-                LinkedBlockingQueue<Integer> subscribers = connections.getChannels().get(channel);
-                subscribers.remove(this.getConnectionId());
-            }
-            connections.subscribeChanel(receipt,this.getConnectionId());
+            connections.disconnect(this.getConnectionId());
             int messageId = connections.getMessageID();
             String message = String.format(
-                    "SUBSCRIBED\nid:%s\ndestination:%s\n\n^@",
-                    receipt
+                    "SUBSCRIBED\nid:%s\ndestination:%s\n\n^@"
+                    ,messageId
             );
             connections.send(this.getConnectionId(), message);
         }
