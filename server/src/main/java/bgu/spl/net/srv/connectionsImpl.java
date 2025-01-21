@@ -7,7 +7,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 
-public class connectionsImpl<T> implements Connections {
+public class connectionsImpl<T> implements  Connections<T> {
     
     private static connectionsImpl<?> instance;
 
