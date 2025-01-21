@@ -2,6 +2,8 @@ package bgu.spl.net.impl.stomp;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import bgu.spl.net.api.StompMessagingProtocol;
 import bgu.spl.net.srv.Connections;
@@ -32,16 +34,18 @@ public class StompMessagingProtocolImpl <T>implements StompMessagingProtocol <T>
             this.handleConnect(headers);
         }
         else if(command.equals("SEND")){
-
+            this.handleSend(headers);
         }
         else if(command.equals("SUBSCRIBE")){
-
+            this.handleSub(headers);
         }
         else if(command.equals("DISCONNECT")){
-
+            this.handleDisconnect(headers);
         }
         else{
+            connections.send(this.getConnectionId(), "ERROR\nmessage:Invalid MESSAGE\n^@");
             System.out.println("Wrong messege sent , not in the protocol");
+
         }
                 return null; 
                
@@ -68,6 +72,68 @@ public class StompMessagingProtocolImpl <T>implements StompMessagingProtocol <T>
         return headers;
     }
 
+    private void handleDisconnect(Map<String, String> headers) {
+        String receipt=headers.get("receipt");
+        if(!connections.getActiveClients().containsKey(receipt)){
+            connections.send(this.getConnectionId(), "ERROR\nmessage:ID not found: " + receipt + "\n^@");
+        }
+        else{
+            connections.getActiveClients().remove(receipt);
+            for (String channel : connections.getChannels().keySet()) {
+                LinkedBlockingQueue<Integer> subscribers = connections.getChannels().get(channel);
+                subscribers.remove(this.getConnectionId());
+            }
+            connections.subscribeChanel(receipt,this.getConnectionId());
+            int messageId = connections.getMessageID();
+            String message = String.format(
+                    "SUBSCRIBED\nid:%s\ndestination:%s\n\n^@",
+                    receipt
+            );
+            connections.send(this.getConnectionId(), message);
+        }
+    }
+
+
+    private void handleSub(Map<String, String> headers) {
+        String destination=headers.get("destination");
+        String id=headers.get("id");
+        if (!connections.getChannels().containsKey(destination)) {
+            connections.send(this.getConnectionId(), "ERROR\nmessage:Topic not found: " + destination + "\n^@");
+        }
+        else if (!connections.getActiveClients().containsKey(id)) {
+            connections.send(this.getConnectionId(), "ERROR\nmessage:ID not found: " + id + "\n^@");
+        }
+        else{
+            connections.subscribeChanel(destination,this.getConnectionId());
+            int messageId = connections.getMessageID();
+            String message = String.format(
+                    "SUBSCRIBED\nid:%s\ndestination:%s\n\n^@",
+                    id,
+                    destination
+            );
+            connections.send(this.getConnectionId(), message);
+        }
+    }
+
+        private void handleSend(Map<String, String> headers) {
+        String destination = headers.get("destination");
+        if (!connections.getChannels().containsKey(destination)) {
+            connections.send(this.getConnectionId(), "ERROR\nmessage:Topic not found: " + destination + "\n^@");
+            return;
+        }
+        String body = headers.get("body");
+        connections.setMessageID();
+        int messageId = connections.getMessageID();
+        String message = String.format(
+                "MESSAGE\nsubscription:%d\nmessage-id:%d\ndestination:%s\n\n%s\n^@",
+                this.getConnectionId(),
+                messageId,
+                destination,
+                body != null ? body : ""
+        );
+        connections.send(destination, message);
+    }
+
 
     private void handleConnect(Map<String, String> headers) {
         String acceptVersion = headers.get("accept-version");
@@ -76,20 +142,15 @@ public class StompMessagingProtocolImpl <T>implements StompMessagingProtocol <T>
         String passcode = headers.get("passcode");
         if (acceptVersion == null || !acceptVersion.equals("1.2")) {
             connections.send(this.getConnectionId(), "ERROR\nmessage:Unsupported STOMP version\n^@");
-            return;
         }
         else if (host == null || !host.equals("stomp.cs.bgu.ac.il")) {
             connections.send(this.getConnectionId(), "ERROR\nmessage:Invalid host\n^@");
-            return;
         }
         else if (login == null || passcode == null) {
             connections.send(this.getConnectionId(), "ERROR\nmessage:Missing authentication details\n^@");
-            return;
         }
         else {
-            connections.addClient(connectionId, );//////new conection handler
             connections.send(this.getConnectionId(), "CONNECTED\nversion:1.2\n^@");
-
         }
 
 
