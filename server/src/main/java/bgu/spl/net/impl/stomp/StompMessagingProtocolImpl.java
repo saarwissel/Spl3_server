@@ -13,11 +13,13 @@ import bgu.spl.net.srv.connectionsImpl;
 public class StompMessagingProtocolImpl <T>implements StompMessagingProtocol <T>{
     int connectionId;
     connectionsImpl<T> connections;
+    boolean Terminate;
 
     @Override
     public void start(int connectionId, Connections<T> connections) {
         this.connections=(connectionsImpl<T>) connections;
         this.connectionId=connectionId;
+        Terminate=false;
         }
 
     @Override
@@ -53,8 +55,7 @@ public class StompMessagingProtocolImpl <T>implements StompMessagingProtocol <T>
 
     @Override
     public boolean shouldTerminate() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'shouldTerminate'");
+        return Terminate;
     }
 
 
@@ -73,18 +74,23 @@ public class StompMessagingProtocolImpl <T>implements StompMessagingProtocol <T>
     }
 
     private void handleDisconnect(Map<String, String> headers) {
-        String receipt=headers.get("receipt");
-        if(!connections.getActiveClients().containsKey(receipt)){
-            connections.send(this.getConnectionId(), "ERROR\nmessage:ID not found: " + receipt + "\n^@");
+        if(!shouldTerminate()) {
+            String receipt = headers.get("receipt");
+            if (!connections.getActiveClients().containsKey(receipt)) {
+                connections.send(this.getConnectionId(), "ERROR\nmessage:ID not found: " + receipt + "\n^@");
+            } else {
+                connections.disconnect(this.getConnectionId());
+                int messageId = connections.getMessageID();
+                String message = String.format(
+                        "SUBSCRIBED\nid:%s\ndestination:%s\n\n^@"
+                        , messageId
+                );
+                Terminate = true;
+                connections.send(this.getConnectionId(), message);
+            }
         }
         else{
-            connections.disconnect(this.getConnectionId());
-            int messageId = connections.getMessageID();
-            String message = String.format(
-                    "SUBSCRIBED\nid:%s\ndestination:%s\n\n^@"
-                    ,messageId
-            );
-            connections.send(this.getConnectionId(), message);
+            System.out.println("Alredy terminated");
         }
     }
 
