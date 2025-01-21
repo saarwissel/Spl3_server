@@ -1,20 +1,31 @@
 package bgu.spl.net.srv;
 
+import java.io.IOException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public class connectionsImpl<T> implements Connections {
+    
+    private static connectionsImpl<?> instance;
 
     private ConcurrentMap<Integer, ConnectionHandler<T>> activeClients;
-    private ConcurrentMap<String, BlockingQueue <Integer>> subscriptions;
-    int messageID;
+    private ConcurrentMap<String, BlockingQueue <Integer>>  channels;
+    String method;
 
 
     connectionsImpl(){
         this.activeClients= new ConcurrentHashMap<>();
-        this.subscriptions=new ConcurrentHashMap<>();
-        this.messageID=0;
+        this.channels=new ConcurrentHashMap<>();
+        method  ="";
+    }
+    public static synchronized <T> connectionsImpl<T> getInstance() {
+        if (instance == null) {
+            instance = new connectionsImpl<>();
+        }
+        return (connectionsImpl<T>) instance;
     }
 
     @Override
@@ -30,14 +41,13 @@ public class connectionsImpl<T> implements Connections {
         {
         return false;
         } 
-        // TODO Auto-generated method stub
     }
 
     @Override
     public void send(String channel, Object msg) {
-        if(subscriptions.get(channel)!=null){
-            synchronized(subscriptions.get(channel)){
-            for(Integer id: subscriptions.get(channel)){
+        if(channels.get(channel)!=null){
+            synchronized(channels.get(channel)){
+            for(Integer id: channels.get(channel)){
                 this.send(id, msg);
             }
             }
@@ -46,11 +56,42 @@ public class connectionsImpl<T> implements Connections {
 
     @Override
     public void disconnect(int connectionId) {
-        if(connectionId>=0){
-            activeClients.remove(connectionId);
-            for (String channel : subscriptions.keySet()) {
-                subscriptions.get(channel).remove(connectionId);
+        ConnectionHandler handler=activeClients.get(connectionId);
+        if(handler!=null){
+            try {
+                activeClients.get(connectionId).close();
+                activeClients.remove(connectionId);
+             for (String channel : channels.keySet()) {
+                channels.get(channel).remove(connectionId);
+                }
+            } catch (IOException e) {
+                System.out.println("No handler exist");
             }
+            
         }
+        
+    }
+    public void addClient(int connectionId, ConnectionHandler<T> handler) {
+        activeClients.put(connectionId, handler);
+    }
+
+    public void subscribeChanel(String chanel,int connectionId){
+        if(channels.get(chanel)!=null){
+            channels.get(chanel).add(connectionId);
+        }
+        else{
+            LinkedBlockingQueue<Integer> subs=new LinkedBlockingQueue<>();
+            subs.add(connectionId);
+            channels.put(chanel,subs); 
+        }
+    }
+    public ConcurrentMap<String, BlockingQueue<Integer>> getChannels() {
+        return channels;
+    }
+    public ConcurrentMap<Integer, ConnectionHandler<T>> getActiveClients() {
+        return activeClients;
+    }
+    public String getMethod() {
+        return method;
     }
 }
