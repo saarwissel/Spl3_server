@@ -121,7 +121,7 @@ public class Reactor<T> implements Server<T> {
 
         final NonBlockingConnectionHandler<T> handler = new NonBlockingConnectionHandler<>(
                 readerFactory.get(),
-                protocolFactory.get(),
+                p,
                 clientChan,
                 this);
 
