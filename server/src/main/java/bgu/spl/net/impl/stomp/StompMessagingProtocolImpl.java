@@ -10,12 +10,12 @@ import bgu.spl.net.srv.connectionsImpl;
 
 public class StompMessagingProtocolImpl <T>implements StompMessagingProtocol <T>{
     int connectionId;
-    Connections connections;
+    connectionsImpl<T> connections;
 
     @Override
-    public void start(int connectionId, Connections connections) {
+    public void start(int connectionId, Connections<T> connections) {
+        this.connections=(connectionsImpl<T>) connections;
         this.connectionId=connectionId;
-        this.connections=connections;
         }
 
     @Override
@@ -25,21 +25,23 @@ public class StompMessagingProtocolImpl <T>implements StompMessagingProtocol <T>
         }
         String msg = (String) message;
         Map<String, String> headers = parseHeaders(msg);
-        if(msg.equals("CONNECT")){
+        String[] lines = msg.split("\n");
+        String command = lines[0];
 
+        if(command.equals("CONNECT")){
+            this.handleConnect(headers);
+        }
+        else if(command.equals("SEND")){
 
         }
-        else if(msg.equals("SEND")){
+        else if(command.equals("SUBSCRIBE")){
 
         }
-        else if(msg.equals("SUBSCRIBE")){
-
-        }
-        else if(msg.equals("DISCONNECT")){
+        else if(command.equals("DISCONNECT")){
 
         }
         else{
-            System.out.println("Wroמg messege sent , not in the protocol");
+            System.out.println("Wrong messege sent , not in the protocol");
         }
                 return null; 
                
@@ -66,6 +68,40 @@ public class StompMessagingProtocolImpl <T>implements StompMessagingProtocol <T>
         return headers;
     }
 
-    
 
+    private void handleConnect(Map<String, String> headers) {
+        String acceptVersion = headers.get("accept-version");
+        String host = headers.get("host");
+        String login = headers.get("login");
+        String passcode = headers.get("passcode");
+        if (acceptVersion == null || !acceptVersion.equals("1.2")) {
+            connections.send(this.getConnectionId(), "ERROR\nmessage:Unsupported STOMP version\n^@");
+            return;
+        }
+        else if (host == null || !host.equals("stomp.cs.bgu.ac.il")) {
+            connections.send(this.getConnectionId(), "ERROR\nmessage:Invalid host\n^@");
+            return;
+        }
+        else if (login == null || passcode == null) {
+            connections.send(this.getConnectionId(), "ERROR\nmessage:Missing authentication details\n^@");
+            return;
+        }
+        else {
+            connections.addClient(connectionId, );//////new conection handler
+            connections.send(this.getConnectionId(), "CONNECTED\nversion:1.2\n^@");
+
+        }
+
+
+    }
+
+    public int getConnectionId() {
+        return connectionId;
+    }
+
+    public connectionsImpl<T> getConnections() {
+        return connections;
+    }
 }
+
+
