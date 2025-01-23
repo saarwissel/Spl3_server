@@ -46,6 +46,7 @@ public class StompMessagingProtocolImpl <T>implements StompMessagingProtocol <T>
         }
         else{
             connections.send(this.getConnectionId(), "ERROR\nmessage:Invalid MESSAGE\n^@");
+            connections.disconnect(this.getConnectionId());
             System.out.println("Wrong messege sent , not in the protocol");
 
         }
@@ -78,6 +79,8 @@ public class StompMessagingProtocolImpl <T>implements StompMessagingProtocol <T>
             String receipt = headers.get("receipt");
             if (!connections.getActiveClients().containsKey(receipt)) {
                 connections.send(this.getConnectionId(), "ERROR\nmessage:ID not found: " + receipt + "\n^@");
+                connections.disconnect(this.getConnectionId());
+
             } else {
                 connections.disconnect(this.getConnectionId());
                 int messageId = connections.getMessageID();
@@ -100,9 +103,13 @@ public class StompMessagingProtocolImpl <T>implements StompMessagingProtocol <T>
         String id=headers.get("id");
         if (!connections.getChannels().containsKey(destination)) {
             connections.send(this.getConnectionId(), "ERROR\nmessage:Topic not found: " + destination + "\n^@");
+            connections.disconnect(this.getConnectionId());
+
         }
         else if (!connections.getActiveClients().containsKey(id)) {
-            connections.send(this.getConnectionId(), "ERROR\nmessage:ID not found: " + id + "\n^@");
+            connections.send(this.getConnectionId(), "ERROR\nmessage:ID not found: " + id+ "not connected" + "\n^@");
+            connections.disconnect(this.getConnectionId());
+
         }
         else{
             connections.subscribeChanel(destination,this.getConnectionId());
@@ -120,6 +127,7 @@ public class StompMessagingProtocolImpl <T>implements StompMessagingProtocol <T>
         String destination = headers.get("destination");
         if (!connections.getChannels().containsKey(destination)) {
             connections.send(this.getConnectionId(), "ERROR\nmessage:Topic not found: " + destination + "\n^@");
+            connections.disconnect(this.getConnectionId());
             return;
         }
         String body = headers.get("body");
@@ -143,12 +151,15 @@ public class StompMessagingProtocolImpl <T>implements StompMessagingProtocol <T>
         String passcode = headers.get("passcode");
         if (acceptVersion == null || !acceptVersion.equals("1.2")) {
             connections.send(this.getConnectionId(), "ERROR\nmessage:Unsupported STOMP version\n^@");
+            connections.disconnect(this.getConnectionId());
         }
         else if (host == null || !host.equals("stomp.cs.bgu.ac.il")) {
             connections.send(this.getConnectionId(), "ERROR\nmessage:Invalid host\n^@");
+            connections.disconnect(this.getConnectionId());
         }
         else if (login == null || passcode == null) {
             connections.send(this.getConnectionId(), "ERROR\nmessage:Missing authentication details\n^@");
+            connections.disconnect(this.getConnectionId());
         }
         else {
             connections.send(this.getConnectionId(), "CONNECTED\nversion:1.2\n^@");
