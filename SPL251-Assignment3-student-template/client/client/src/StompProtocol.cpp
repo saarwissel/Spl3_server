@@ -30,6 +30,7 @@ public:
 
         // Build and send CONNECT message
         std::string connectMessage = messageBuilder.buildConnectMessage(host, "7777", username, password);
+        connectionHandler.sendLine(connectMessage);  // Send CONNECT message
         if (!connectionHandler.sendLine(connectMessage)) {
             std::cerr << "Failed to send CONNECT message." << std::endl;
             return false;
@@ -37,7 +38,7 @@ public:
 
         // Handle server response
         std::string response;
-        if (!connectionHandler.getLine(response)) {
+        if (!connectionHandler.getLine(response)) {//reed the answer from the server and put it in the response
             std::cerr << "Failed to receive CONNECT response." << std::endl;
             return false;
         }
@@ -75,12 +76,13 @@ public:
     void unsubscribe(const std::string& topic) {
         std::lock_guard<std::mutex> lock(protocolMutex);
         if (!isConnected || subscriptionIds.find(topic) == subscriptionIds.end()) {
-            std::cerr << "Cannot unsubscribe. Either not connected or topic not found." << std::endl;
+            std::cerr << "Cannot UNSUBSCRIBE. Either not connected or topic not found." << std::endl;
             return;
         }
 
         int subscriptionId = subscriptionIds[topic];
         std::string unsubscribeMessage = messageBuilder.buildUnsubscribeMessage(subscriptionId);
+        connectionHandler.sendLine(unsubscribeMessage); // Send UNSUBSCRIBE message
         if (!connectionHandler.sendLine(unsubscribeMessage)) {
             std::cerr << "Failed to send UNSUBSCRIBE message." << std::endl;
         } else {
@@ -113,6 +115,7 @@ public:
         }
 
         std::string disconnectMessage = messageBuilder.buildDisconnectMessage();
+        connectionHandler.sendLine(disconnectMessage);  // Send DISCONNECT message
         if (!connectionHandler.sendLine(disconnectMessage)) {
             std::cerr << "Failed to send DISCONNECT message." << std::endl;
         } else {
