@@ -15,6 +15,7 @@ private:
     std::mutex protocolMutex;
     ConnectionHandler& connectionHandler;
     StompMessageBuilder messageBuilder;
+    std::unordered_map<std::string, std::vector<std::string>> eventsByChannel;
 
 public:
     StompProtocol(ConnectionHandler& handler)

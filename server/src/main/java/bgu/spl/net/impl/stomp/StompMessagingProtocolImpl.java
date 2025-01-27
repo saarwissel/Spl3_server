@@ -41,7 +41,10 @@ public class StompMessagingProtocolImpl <T>implements StompMessagingProtocol <T>
         else if(command.equals("SUBSCRIBE")){
             this.handleSub(headers);
         }
-        else if(command.equals("DISCONNECT")){
+        else if(command.equals("UNSUBSCRIBE")){
+            this.handleUnsub(headers);
+        }
+        else if(command.equals("DISCONNECT")){/////++++++++++++
             this.handleDisconnect(headers);
         }
         else{
@@ -57,6 +60,29 @@ public class StompMessagingProtocolImpl <T>implements StompMessagingProtocol <T>
     @Override
     public boolean shouldTerminate() {
         return Terminate;
+    }
+
+
+
+    private void handleUnsub(Map<String, String> headers) {
+        String idSub=headers.get("id");
+        String destination = connections.getIDchannel().get(idSub);
+        String username = connections.getSubID().get(idSub);
+        if (username == null) {
+            connections.send(this.getConnectionId(), "ERROR\nmessage:ID not found: " + connectionId + "\n^@");
+            connections.disconnect(this.getConnectionId());
+        }
+        else {
+            connections.getChannels().get(destination).remove(username);
+            connections.getSubID().remove(idSub);
+            connections.getIDchannel().remove(idSub);
+            int Id = this.connectionId;
+            String message = String.format(
+                    "UNSUBSCRIBED\nid:%s\n\n^@",
+                    Id
+            );
+            connections.send(this.getConnectionId(), message);
+        }
     }
 
 
@@ -83,10 +109,10 @@ public class StompMessagingProtocolImpl <T>implements StompMessagingProtocol <T>
 
             } else {
                 connections.disconnect(this.getConnectionId());
-                int messageId = connections.getMessageID();
+                int Id = this.connectionId;
                 String message = String.format(
                         "SUBSCRIBED\nid:%s\ndestination:%s\n\n^@"
-                        , messageId
+                        , Id
                 );
                 Terminate = true;
                 connections.send(this.getConnectionId(), message);
@@ -100,23 +126,21 @@ public class StompMessagingProtocolImpl <T>implements StompMessagingProtocol <T>
 
     private void handleSub(Map<String, String> headers) {
         String destination=headers.get("destination");
-        String id=headers.get("id");
+        String idSub=headers.get("id");
+        String username = connections.getLoginID().get(this.getConnectionId());
         if (!connections.getChannels().containsKey(destination)) {
             connections.send(this.getConnectionId(), "ERROR\nmessage:Topic not found: " + destination + "\n^@");
             connections.disconnect(this.getConnectionId());
 
         }
-        else if (!connections.getActiveClients().containsKey(id)) {
-            connections.send(this.getConnectionId(), "ERROR\nmessage:ID not found: " + id+ "not connected" + "\n^@");
-            connections.disconnect(this.getConnectionId());
-
-        }
         else{
-            connections.subscribeChanel(destination,this.getConnectionId());
+            connections.getSubID().put(idSub,username);
+            connections.subscribeChanel(destination,username);
+            connections.getIDchannel().put(idSub,destination);
             int messageId = connections.getMessageID();
             String message = String.format(
                     "SUBSCRIBED\nid:%s\ndestination:%s\n\n^@",
-                    id,
+                    messageId,
                     destination
             );
             connections.send(this.getConnectionId(), message);
@@ -148,7 +172,10 @@ public class StompMessagingProtocolImpl <T>implements StompMessagingProtocol <T>
         String acceptVersion = headers.get("accept-version");
         String host = headers.get("host");
         String login = headers.get("login");
+        
         String passcode = headers.get("passcode");
+        connections.getUserID().put(login, this.getConnectionId());
+        connections.getLoginID().put(this.getConnectionId(), login);
         if (acceptVersion == null || !acceptVersion.equals("1.2")) {
             connections.send(this.getConnectionId(), "ERROR\nmessage:Unsupported STOMP version\n^@");
             connections.disconnect(this.getConnectionId());
@@ -160,6 +187,9 @@ public class StompMessagingProtocolImpl <T>implements StompMessagingProtocol <T>
         else if (login == null || passcode == null) {
             connections.send(this.getConnectionId(), "ERROR\nmessage:Missing authentication details\n^@");
             connections.disconnect(this.getConnectionId());
+        }
+        else if (connectionsImpl.getInstance().getUsers().get(login) == null) {
+            connections.getUsers().put(login, passcode);
         }
         else {
             connections.send(this.getConnectionId(), "CONNECTED\nversion:1.2\n^@");

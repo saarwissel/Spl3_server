@@ -15,7 +15,7 @@ int main(int argc, char *argv[]) {
     std::string username = argv[3];
 
     ConnectionHandler connectionHandler(host, port);
-
+    
     if (!connectionHandler.connect()) {
         std::cerr << "Could not connect to server at " << host << ":" << port << std::endl;
         return 1;
@@ -23,9 +23,12 @@ int main(int argc, char *argv[]) {
 
     StompProtocol protocol(connectionHandler);
 
+
     std::string password;
     std::cout << "Enter password for user " << username << ": ";
     std::cin >> password;
+    
+    protocol.connect(host, username, password);
 
     if (!protocol.connect(host, username, password)) {
         std::cerr << "Failed to log in to the server." << std::endl;
@@ -40,13 +43,13 @@ int main(int argc, char *argv[]) {
         std::cout << "> ";
         std::getline(std::cin, command);
 
-        if (command.starts_with("subscribe ")) {
+        if (command.rfind("join", 0) == 0) {
             std::string topic = command.substr(10); // Extract topic after "subscribe "
             protocol.subscribe(topic);
-        } else if (command.starts_with("unsubscribe ")) {
+        } else if (command.rfind("exit", 0) == 0) {
             std::string topic = command.substr(12); // Extract topic after "unsubscribe "
             protocol.unsubscribe(topic);
-        } else if (command.starts_with("send ")) {
+        } else if (command.rfind("report", 0) == 0) {
             size_t spacePos = command.find(' ', 5); // Find the space after "send "
             if (spacePos != std::string::npos) {
                 std::string topic = command.substr(5, spacePos - 5);
@@ -55,7 +58,7 @@ int main(int argc, char *argv[]) {
             } else {
                 std::cerr << "Usage: send <topic> <message>" << std::endl;
             }
-        } else if (command == "disconnect") {
+        } else if (command == "DISCONNECT") {
             protocol.disconnect();
         } else if (!command.empty()) {
             std::cerr << "Unknown command." << std::endl;
