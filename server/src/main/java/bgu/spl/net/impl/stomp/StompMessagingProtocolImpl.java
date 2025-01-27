@@ -76,10 +76,10 @@ public class StompMessagingProtocolImpl <T>implements StompMessagingProtocol <T>
             connections.getChannels().get(destination).remove(username);
             connections.getSubID().remove(idSub);
             connections.getIDchannel().remove(idSub);
-            int messageId = connections.getMessageID();
+            int Id = this.connectionId;
             String message = String.format(
                     "UNSUBSCRIBED\nid:%s\n\n^@",
-                    messageId
+                    Id
             );
             connections.send(this.getConnectionId(), message);
         }
@@ -109,10 +109,10 @@ public class StompMessagingProtocolImpl <T>implements StompMessagingProtocol <T>
 
             } else {
                 connections.disconnect(this.getConnectionId());
-                int messageId = connections.getMessageID();
+                int Id = this.connectionId;
                 String message = String.format(
                         "SUBSCRIBED\nid:%s\ndestination:%s\n\n^@"
-                        , messageId
+                        , Id
                 );
                 Terminate = true;
                 connections.send(this.getConnectionId(), message);
