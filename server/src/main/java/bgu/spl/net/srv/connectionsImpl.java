@@ -12,7 +12,15 @@ public class connectionsImpl<T> implements  Connections<T> {
     private static connectionsImpl<?> instance;
 
     private ConcurrentMap<Integer, ConnectionHandler<T>> activeClients;
-    private ConcurrentMap<String, LinkedBlockingQueue <Integer>>  channels;
+
+    private ConcurrentMap<String,String> users;
+    private ConcurrentMap<String,Integer> userID;// username+conectionID
+    private ConcurrentMap<Integer,String> loginID;//// conectionID+username
+    private ConcurrentMap<String,String> SubID; // subID + username
+    private ConcurrentMap<String,String> IDchannel; // subID + chanel
+
+    private ConcurrentMap<String, LinkedBlockingQueue <String>>  channels;//chanale + list of usernemas
+
     String method;
     int messageID;
 
@@ -20,6 +28,7 @@ public class connectionsImpl<T> implements  Connections<T> {
     connectionsImpl(){
         this.activeClients= new ConcurrentHashMap<>();
         this.channels=new ConcurrentHashMap<>();
+        this.users=new ConcurrentHashMap<>();
         method  ="";
         this.messageID=0;
     }
@@ -49,9 +58,11 @@ public class connectionsImpl<T> implements  Connections<T> {
     public void send(String channel, Object msg) {
         if(channels.get(channel)!=null){
             synchronized(channels.get(channel)){
-            for(Integer id: channels.get(channel)){
-                this.send(id, msg);
-            }
+            for(String login: channels.get(channel)){
+                if(userID.get(login)!=null){
+                    send(userID.get(login),msg);
+                }
+                }
             }
         }
     }
@@ -77,17 +88,18 @@ public class connectionsImpl<T> implements  Connections<T> {
         activeClients.put(connectionId, handler);
     }
 
-    public void subscribeChanel(String chanel,int connectionId){
+    public void subscribeChanel(String chanel,String username){
         if(channels.get(chanel)!=null){
-            channels.get(chanel).add(connectionId);
+
+            channels.get(chanel).add(username);
         }
         else{
-            LinkedBlockingQueue<Integer> subs=new LinkedBlockingQueue<>();
-            subs.add(connectionId);
+            LinkedBlockingQueue<String> subs=new LinkedBlockingQueue<>();
+            subs.add(username);
             channels.put(chanel,subs); 
         }
     }
-    public ConcurrentMap<String, LinkedBlockingQueue<Integer>> getChannels() {
+    public ConcurrentMap<String, LinkedBlockingQueue<String>> getChannels() {
         return channels;
     }
     public ConcurrentMap<Integer, ConnectionHandler<T>> getActiveClients() {
@@ -101,7 +113,27 @@ public class connectionsImpl<T> implements  Connections<T> {
         return messageID;
     }
 
+    public ConcurrentMap<String, Integer> getUserID() {
+        return userID;
+    }
+
+    public ConcurrentMap<String, String> getUsers() {
+        return users;
+    }
+
+    public ConcurrentMap<Integer, String> getLoginID() {
+        return loginID;
+    }
+
+    public ConcurrentMap<String, String> getSubID() {
+        return SubID;
+    }
+
     public void setMessageID() {
         this.messageID = messageID++;
+    }
+
+    public ConcurrentMap<String, String> getIDchannel() {
+        return IDchannel;
     }
 }
