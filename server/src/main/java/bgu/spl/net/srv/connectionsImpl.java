@@ -11,14 +11,12 @@ public class connectionsImpl<T> implements  Connections<T> {
     
     private static connectionsImpl<?> instance;
 
-    private ConcurrentMap<Integer, ConnectionHandler<T>> activeClients;
-
-    private ConcurrentMap<String,String> users;
+    private ConcurrentMap<Integer, ConnectionHandler<T>> activeClients; // connectionID+handler
+    private ConcurrentMap<String,String> users;//// username+password
     private ConcurrentMap<String,Integer> userID;// username+conectionID
     private ConcurrentMap<Integer,String> loginID;//// conectionID+username
     private ConcurrentMap<String,String> SubID; // subID + username
     private ConcurrentMap<String,String> IDchannel; // subID + chanel
-
     private ConcurrentMap<String, LinkedBlockingQueue <String>>  channels;//chanale + list of usernemas
 
     String method;
@@ -73,10 +71,10 @@ public class connectionsImpl<T> implements  Connections<T> {
         if(handler!=null){
             try {
                 activeClients.get(connectionId).close();
+                String username=loginID.get(connectionId);
+                userID.remove(connectionId, username);
+                loginID.remove(username,connectionId);
                 activeClients.remove(connectionId);
-             for (String channel : channels.keySet()) {
-                channels.get(channel).remove(connectionId);
-                }
             } catch (IOException e) {
                 System.out.println("No handler exist");
             }
