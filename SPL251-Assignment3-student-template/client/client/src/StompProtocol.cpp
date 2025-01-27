@@ -5,17 +5,18 @@
 #include <unordered_map>
 #include <mutex>
 #include <string>
+#include <fstream>
 
 class StompProtocol {
 private:
     bool isConnected;
     bool shouldTerminateConnection;
     std::string username;
-    std::unordered_map<std::string, int> subscriptionIds; // Map topic to subscription ID
+    std::unordered_map<std::string, int> subscriptionIds; // cannel+subID  Map topic to subscription ID
     std::mutex protocolMutex;
     ConnectionHandler& connectionHandler;
     StompMessageBuilder messageBuilder;
-    std::unordered_map<std::string, std::vector<std::string>> eventsByChannel;
+    std::unordered_map<std::string, std::vector<std::string>> eventsByChannel;// cannel+event
 
 public:
     StompProtocol(ConnectionHandler& handler)
@@ -100,12 +101,14 @@ public:
         }
 
         std::string sendMessage = messageBuilder.buildSendMessage(topic, messageBody);
-        connectionHandler.sendLine(sendMessage);
-        if (!connectionHandler.sendLine(sendMessage)) {
-            std::cerr << "Failed to send message." << std::endl;
-        } else {
+        if(connectionHandler.sendLine(sendMessage)){
+            eventsByChannel[topic].push_back(messageBody);
             std::cout << "Message sent to topic: " << topic << std::endl;
         }
+        else 
+         {
+            std::cerr << "Failed to send message." << std::endl;
+        } 
     }
 
     void disconnect() {
@@ -141,6 +144,66 @@ public:
         } else if (message.find("ERROR") != std::string::npos) {
             std::cerr << "Error received: " << message << std::endl;
         }
+    }
+
+
+    void summarize(const std::string& channelName, const std::string& user, const std::string& outputFileName) {
+        std::lock_guard<std::mutex> lock(protocolMutex);
+    
+        if (eventsByChannel.find(channelName) == eventsByChannel.end()) {
+        std::cerr << "No events found for channel: " << channelName << std::endl;
+            return;
+        }
+
+        const auto& events = eventsByChannel[channelName];
+        int totalReports = 0;
+        int activeCount = 0;
+        int forcesArrivalCount = 0;
+
+         // ניתוח האירועים
+        std::vector<std::string> reportLines;
+        for (const auto& event : events) {
+            if (event.find("user:" + user) != std::string::npos) {
+                totalReports++;
+                if (event.find("active:true") != std::string::npos) {
+                    activeCount++;
+                }
+                if (event.find("forces_arrival_at_scene:true") != std::string::npos) {
+                    forcesArrivalCount++;
+                }
+
+                // יצירת תקציר של תיאור האירוע
+                size_t descriptionStart = event.find("description:") + 12;
+                size_t descriptionEnd = event.find("\n", descriptionStart);
+                std::string description = event.substr(descriptionStart, descriptionEnd - descriptionStart);
+                if (description.length() > 27) {
+                description = description.substr(0, 27) + "...";
+                }
+
+                // הוספת פרטי האירוע
+                reportLines.push_back("Report_" + std::to_string(totalReports) + ":\n" + event);
+            }
+        }
+
+        // כתיבת הדוח לקובץ
+        std::ofstream outFile(outputFileName);
+        if (!outFile.is_open()) {
+            std::cerr << "Failed to open file: " << outputFileName << std::endl;
+            return;
+        }
+
+        outFile << "Channel " << channelName << "\n";
+        outFile << "Stats:\n";
+        outFile << "Total: " << totalReports << "\n";
+        outFile << "active: " << activeCount << "\n";
+        outFile << "forces arrival at scene: " << forcesArrivalCount << "\n";
+        outFile << "\nEvent Reports:\n";
+        for (const auto& line : reportLines) {
+            outFile << line << "\n";
+        }
+
+        outFile.close();
+        std::cout << "Summary written to file: " << outputFileName << std::endl;
     }
 
     bool shouldTerminate() const {
