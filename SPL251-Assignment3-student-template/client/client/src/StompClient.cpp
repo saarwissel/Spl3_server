@@ -68,14 +68,40 @@ void socketThread(ConnectionHandler &connectionHandler, StompProtocol &protocol)
 }
 
 int main(int argc, char *argv[]) {
-    if (argc != 4) {
-        std::cerr << "Usage: " << argv[0] << " <host> <port> <username>" << std::endl;
+    if (argc != 5) {
+        std::cerr << "Usage: " << argv[0] << " login <host>:<port> <username> <password>" << std::endl;
         return 1;
     }
 
-    std::string host = argv[1];
-    short port = std::stoi(argv[2]);
-    std::string username = argv[3];
+    std::string command = argv[1];
+    if (command != "login") {
+        std::cerr << "Error: First argument must be 'login'" << std::endl;
+        return 1;
+    }
+
+    std::string host_port = argv[2]; 
+    std::string username = argv[3]; 
+    std::string password = argv[4]; 
+
+    std::string host;
+    short port;
+    size_t colon_pos = host_port.find(':'); 
+    if (colon_pos == std::string::npos) {
+        std::cerr << "Error: Host and port must be in the format <host>:<port>" << std::endl;
+        return 1;
+    }
+
+  
+    host = host_port.substr(0, colon_pos); 
+    try {
+        port = std::stoi(host_port.substr(colon_pos + 1)); 
+    } catch (const std::invalid_argument& e) {
+        std::cerr << "Error: Port must be a valid number." << std::endl;
+        return 1;
+    } catch (const std::out_of_range& e) {
+        std::cerr << "Error: Port number out of range." << std::endl;
+        return 1;
+    }
 
     ConnectionHandler connectionHandler(host, port);
     StompProtocol protocol(connectionHandler);
@@ -85,13 +111,7 @@ int main(int argc, char *argv[]) {
         std::cerr << "Could not connect to server at " << host << ":" << port << std::endl;
         return 1;
     }
-
-    // בקשת סיסמה והתחברות עם פרוטוקול STOMP
-    std::string password;
-    std::cout << "Enter password for user " << username << ": ";
-    std::cin >> password;
-    std::cin.ignore();  // Clear newline from the input buffer
-
+    
     if (!protocol.connect(host, username, password)) {
         std::cerr << "Failed to log in to the server." << std::endl;
         return 1;
