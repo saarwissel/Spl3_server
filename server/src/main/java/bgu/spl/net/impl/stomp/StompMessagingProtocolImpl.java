@@ -23,7 +23,7 @@ public class StompMessagingProtocolImpl <T>implements StompMessagingProtocol <T>
         }
 
     @Override
-    public T process(Object message) {
+    public synchronized T  process(Object message) {
         if (!(message instanceof String)) {
             throw new IllegalArgumentException("Invalid message type: " + message.getClass());
         }
@@ -31,31 +31,32 @@ public class StompMessagingProtocolImpl <T>implements StompMessagingProtocol <T>
         Map<String, String> headers = parseHeaders(msg);
         String[] lines = msg.split("\n");
         String command = lines[0];
+        T response = null;
 
         if(command.equals("CONNECT")){
-            System.out.println("fuckhums");
-            this.handleConnect(headers);
+            System.out.println("CONNECT");
+            response=(T)handleConnect(headers);
+            System.out.println("response: "+response);
         }
         else if(command.equals("SEND")){
-            this.handleSend(headers);
+            response=(T)handleSend(headers);
         }
         else if(command.equals("SUBSCRIBE")){
-            this.handleSub(headers);
+            response= (T)handleSub(headers);
         }
         else if(command.equals("UNSUBSCRIBE")){
-            this.handleUnsub(headers);
+            response =(T)this.handleUnsub(headers);
         }
         else if(command.equals("DISCONNECT")){/////++++++++++++
-            this.handleDisconnect(headers);
+            response=(T)this.handleDisconnect(headers);
         }
         else{
-            connections.send(this.getConnectionId(), "ERROR\nmessage:Invalid MESSAGE\n^@");
             connections.disconnect(this.getConnectionId());
             System.out.println("Wrong messege sent , not in the protocol");
-            return null;
+            response= (T)"ERROR\nmessage:Invalid MESSAGE\n^@";
+
         }
-                 
-               
+        return response;               
     }
 
     @Override
@@ -65,13 +66,13 @@ public class StompMessagingProtocolImpl <T>implements StompMessagingProtocol <T>
 
 
 
-    private void handleUnsub(Map<String, String> headers) {
+    private String handleUnsub(Map<String, String> headers) {
         String idSub=headers.get("id");
         String destination = connections.getIDchannel().get(idSub);
         String username = connections.getSubID().get(idSub);
         if (username == null) {
-            connections.send(this.getConnectionId(), "ERROR\nmessage:ID not found: " + connectionId + "\n^@");
             connections.disconnect(this.getConnectionId());
+            return"ERROR\nmessage:ID not found: " + connectionId + "\n^@";
         }
         else {
             connections.getChannels().get(destination).remove(username);
@@ -82,7 +83,7 @@ public class StompMessagingProtocolImpl <T>implements StompMessagingProtocol <T>
                     "UNSUBSCRIBED\nid:%s\n\n^@",
                     Id
             );
-            connections.send(this.getConnectionId(), message);
+            return message;
         }
     }
 
@@ -101,13 +102,12 @@ public class StompMessagingProtocolImpl <T>implements StompMessagingProtocol <T>
         return headers;
     }
 
-    private void handleDisconnect(Map<String, String> headers) {
+    private String handleDisconnect(Map<String, String> headers) {
         if(!shouldTerminate()) {
             String receipt = headers.get("receipt");
             if (!connections.getActiveClients().containsKey(receipt)) {
-                connections.send(this.getConnectionId(), "ERROR\nmessage:ID not found: " + receipt + "\n^@");
                 connections.disconnect(this.getConnectionId());
-
+                return"ERROR\nmessage:ID not found: " + receipt + "\n^@";
             } else {
                 connections.disconnect(this.getConnectionId());
                 int Id = this.connectionId;
@@ -116,22 +116,23 @@ public class StompMessagingProtocolImpl <T>implements StompMessagingProtocol <T>
                         , Id
                 );
                 Terminate = true;
-                connections.send(this.getConnectionId(), message);
+                return message;
             }
         }
         else{
             System.out.println("Alredy terminated");
+            return "ERROR\nmessage:Alredy terminated\n^@";
         }
     }
 
 
-    private void handleSub(Map<String, String> headers) {
+    private String handleSub(Map<String, String> headers) {
         String destination=headers.get("destination");
         String idSub=headers.get("id");
         String username = connections.getLoginID().get(this.getConnectionId());
         if (!connections.getChannels().containsKey(destination)) {
-            connections.send(this.getConnectionId(), "ERROR\nmessage:Topic not found: " + destination + "\n^@");
             connections.disconnect(this.getConnectionId());
+            return "ERROR\nmessage:Topic not found: " + destination + "\n^@";
 
         }
         else{
@@ -144,16 +145,16 @@ public class StompMessagingProtocolImpl <T>implements StompMessagingProtocol <T>
                     messageId,
                     destination
             );
-            connections.send(this.getConnectionId(), message);
+            return message;
         }
     }
 
-        private void handleSend(Map<String, String> headers) {
+        private String handleSend(Map<String, String> headers) {
         String destination = headers.get("destination");
         if (!connections.getChannels().containsKey(destination)) {
-            connections.send(this.getConnectionId(), "ERROR\nmessage:Topic not found: " + destination + "\n^@");
             connections.disconnect(this.getConnectionId());
-            return;
+            return "ERROR\nmessage:Topic not found: " + destination + "\n^@";
+
         }
         String body = headers.get("body");
         connections.setMessageID();
@@ -166,43 +167,31 @@ public class StompMessagingProtocolImpl <T>implements StompMessagingProtocol <T>
                 body != null ? body : ""
         );
         connections.send(destination, message);
+        return message;
     }
 
 
-    private void handleConnect(Map<String, String> headers) {
+    private String handleConnect(Map<String, String> headers) {
         String acceptVersion = headers.get("accept-version");
         String host = headers.get("host");
         String login = headers.get("login");
         String passcode = headers.get("passcode");
     
-        if (connections == null || connections.getUserID() == null) {
-            System.err.println("Error: connections or getUserID is null!");
-            connections.disconnect(this.getConnectionId());
-            return;
-        }
+
         if (acceptVersion == null || !acceptVersion.equals("1.2")) {
-            connections.send(this.getConnectionId(), "ERROR\nmessage:Unsupported STOMP version\n^@");
             connections.disconnect(this.getConnectionId());
-            return;
+            return "ERROR\nmessage:Unsupported STOMP version\n^@";            
         }
-    
-        
+
         if (host == null || !host.equals("127.0.0.1")) {
-            connections.send(this.getConnectionId(), "ERROR\nmessage:Invalid host\n^@");
             connections.disconnect(this.getConnectionId());
-            return;
+            return"ERROR\nmessage:Invalid host\n^@";
+
         }
     
         if (login == null || passcode == null) {
-            connections.send(this.getConnectionId(), "ERROR\nmessage:Missing authentication details\n^@");
             connections.disconnect(this.getConnectionId());
-            return;
-        }
-    
-        if (connectionsImpl.getInstance().getUsers() == null) {
-            System.err.println("Error: Users map is null!");
-            connections.disconnect(this.getConnectionId());
-            return;
+            return"ERROR\nmessage:Missing authentication details\n^@";
         }
     
         if (connectionsImpl.getInstance().getUsers().get(login) == null) {
@@ -210,10 +199,10 @@ public class StompMessagingProtocolImpl <T>implements StompMessagingProtocol <T>
         }
         connections.getUserID().put(login, this.getConnectionId());
         connections.getLoginID().put(this.getConnectionId(), login);
-        connections.send(this.getConnectionId(), "CONNECTED\nversion:1.2\n^@");
+        return "CONNECTED\nversion:1.2\n^@";
     }
-    
 
+    
     public int getConnectionId() {
         return connectionId;
     }

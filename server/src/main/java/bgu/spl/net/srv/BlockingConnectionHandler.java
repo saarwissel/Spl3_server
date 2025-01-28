@@ -24,7 +24,7 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
 
     @Override
     public void run() {
-        try (Socket sock = this.sock) { //just for automatic closing
+        try (Socket sock = this.sock) { // just for automatic closing
             int read;
 
             in = new BufferedInputStream(sock.getInputStream());
@@ -35,8 +35,11 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
                 if (nextMessage != null) {
                     T response = protocol.process(nextMessage);
                     if (response != null) {
-                        out.write(encdec.encode(response));
-                        out.flush();
+                        // סנכרון לכתיבת התשובה
+                        synchronized (this) {
+                            out.write(encdec.encode(response));
+                            out.flush();
+                        }
                     }
                 }
             }
@@ -44,7 +47,6 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
         } catch (IOException ex) {
             ex.printStackTrace();
         }
-
     }
 
     @Override
@@ -55,16 +57,16 @@ public class BlockingConnectionHandler<T> implements Runnable, ConnectionHandler
 
     @Override
     public void send(T msg) {
-    if(msg != null && connected && !protocol.shouldTerminate()){
-        synchronized(msg){
-                try{
+        if (msg != null && connected && !protocol.shouldTerminate()) {
+            // סנכרון לכתיבת הודעה
+            synchronized (this) {
+                try {
                     byte[] encodedMessage = encdec.encode(msg);
-                    if(encodedMessage!=null){
+                    if (encodedMessage != null) {
                         out.write(encodedMessage);
                         out.flush();
                     }
-                }
-                catch(IOException e){
+                } catch (IOException e) {
                     System.err.println("Failed to send message: " + e.getMessage());
                     connected = false;
                 }
