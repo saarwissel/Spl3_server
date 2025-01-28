@@ -73,18 +73,14 @@ public class connectionsImpl<T> implements  Connections<T> {
     public void disconnect(int connectionId) {
         ConnectionHandler handler=activeClients.get(connectionId);
         if(handler!=null){
-            try {
-                activeClients.get(connectionId).close();
+            synchronized(handler){
+                //activeClients.get(connectionId).close();
                 String username=loginID.get(connectionId);
                 userID.remove(connectionId, username);
                 loginID.remove(username,connectionId);
-                activeClients.remove(connectionId);
-            } catch (IOException e) {
-                System.out.println("No handler exist");
+                activeClients.remove(connectionId);    
             }
-            
-        }
-        
+        }     
     }
     public void addClient(int connectionId, ConnectionHandler<T> handler) {
         activeClients.put(connectionId, handler);
