@@ -102,11 +102,9 @@ int main(int argc, char *argv[]) {
         std::cerr << "Error: Port number out of range." << std::endl;
         return 1;
     }
-
+    std::cout << "Host: " << host << ", Port: " << port << std::endl;
     ConnectionHandler connectionHandler(host, port);
     StompProtocol protocol(connectionHandler);
-
-    // ניסיון להתחבר לשרת
     if (!connectionHandler.connect()) {
         std::cerr << "Could not connect to server at " << host << ":" << port << std::endl;
         return 1;

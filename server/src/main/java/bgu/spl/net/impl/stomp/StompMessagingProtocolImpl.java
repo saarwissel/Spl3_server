@@ -33,6 +33,7 @@ public class StompMessagingProtocolImpl <T>implements StompMessagingProtocol <T>
         String command = lines[0];
 
         if(command.equals("CONNECT")){
+            System.out.println("fuckhums");
             this.handleConnect(headers);
         }
         else if(command.equals("SEND")){
@@ -51,9 +52,9 @@ public class StompMessagingProtocolImpl <T>implements StompMessagingProtocol <T>
             connections.send(this.getConnectionId(), "ERROR\nmessage:Invalid MESSAGE\n^@");
             connections.disconnect(this.getConnectionId());
             System.out.println("Wrong messege sent , not in the protocol");
-
+            return null;
         }
-                return null; 
+                 
                
     }
 
@@ -172,31 +173,46 @@ public class StompMessagingProtocolImpl <T>implements StompMessagingProtocol <T>
         String acceptVersion = headers.get("accept-version");
         String host = headers.get("host");
         String login = headers.get("login");
-        
         String passcode = headers.get("passcode");
-        connections.getUserID().put(login, this.getConnectionId());
-        connections.getLoginID().put(this.getConnectionId(), login);
+    
+        if (connections == null || connections.getUserID() == null) {
+            System.err.println("Error: connections or getUserID is null!");
+            connections.disconnect(this.getConnectionId());
+            return;
+        }
         if (acceptVersion == null || !acceptVersion.equals("1.2")) {
             connections.send(this.getConnectionId(), "ERROR\nmessage:Unsupported STOMP version\n^@");
             connections.disconnect(this.getConnectionId());
+            return;
         }
-        else if (host == null || !host.equals("stomp.cs.bgu.ac.il")) {
+    
+        
+        if (host == null || !host.equals("127.0.0.1")) {
             connections.send(this.getConnectionId(), "ERROR\nmessage:Invalid host\n^@");
             connections.disconnect(this.getConnectionId());
+            return;
         }
-        else if (login == null || passcode == null) {
+    
+        if (login == null || passcode == null) {
             connections.send(this.getConnectionId(), "ERROR\nmessage:Missing authentication details\n^@");
             connections.disconnect(this.getConnectionId());
+            return;
         }
-        else if (connectionsImpl.getInstance().getUsers().get(login) == null) {
+    
+        if (connectionsImpl.getInstance().getUsers() == null) {
+            System.err.println("Error: Users map is null!");
+            connections.disconnect(this.getConnectionId());
+            return;
+        }
+    
+        if (connectionsImpl.getInstance().getUsers().get(login) == null) {
             connections.getUsers().put(login, passcode);
         }
-        else {
-            connections.send(this.getConnectionId(), "CONNECTED\nversion:1.2\n^@");
-        }
-
-
+        connections.getUserID().put(login, this.getConnectionId());
+        connections.getLoginID().put(this.getConnectionId(), login);
+        connections.send(this.getConnectionId(), "CONNECTED\nversion:1.2\n^@");
     }
+    
 
     public int getConnectionId() {
         return connectionId;

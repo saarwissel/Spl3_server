@@ -17,10 +17,10 @@ public class StompMessageEncoderDecoderImpl<T> implements MessageEncoderDecoder<
     public T decodeNextByte(byte nextByte) {
         // הוספת בייט ל-ByteBuffer
         byteBuffer.put(nextByte);
-
+        
         // נבדוק אם הגענו לסוף ההודעה ^@
         if (nextByte == END_OF_MESSAGE) {
-
+            
             byte[] frameData = new byte[byteBuffer.position() - 1];
             byteBuffer.flip();  // מכניס את ה-ByteBuffer למצב קריאה
             byteBuffer.get(frameData);  // קריאת כל הנתונים מה-ByteBuffer
@@ -34,9 +34,9 @@ public class StompMessageEncoderDecoderImpl<T> implements MessageEncoderDecoder<
             // החזרת ההודעה המפוענחת
             return (T)message;
         }
-
-
+        else{
         return null;
+        }
     }
 
     @Override
