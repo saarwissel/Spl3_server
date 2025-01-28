@@ -1,27 +1,24 @@
-CFLAGS:=-c -Wall -Weffc++ -g -std=c++11 -Iinclude
-LDFLAGS:=-lboost_system -lpthread
-# TODO change the makefile for StompEMIlient
-all: EchoClient
+all: clean bin_dir compile link run
 
-EchoClient: bin/ConnectionHandler.o bin/echoClient.o
-	g++ -o bin/EchoClient bin/ConnectionHandler.o bin/echoClient.o $(LDFLAGS)
+bin_dir:
+	mkdir -p bin
 
-StompWCIClient: bin/ConnectionHandler.o bin/StompClient.obin/event.o
-	g++ -o bin/StompWCIClient bin/ConnectionHandler.o bin/StompClient.o $(LDFLAGS)
+link: compile
+	@echo "Linking binary..."
+	g++ -std=c++11 -o bin/StompClient bin/StompClient.o bin/event.o bin/ConnectionHandler.o bin/StompMessageBuilder.o bin/StompProtocol.o -lpthread
+ 
 
-bin/ConnectionHandler.o: src/ConnectionHandler.cpp
-	g++ $(CFLAGS) -o bin/ConnectionHandler.o src/ConnectionHandler.cpp
 
-bin/echoClient.o: src/echoClient.cpp
-	g++ $(CFLAGS) -o bin/echoClient.o src/echoClient.cpp
+compile: src/StompClient.cpp src/event.cpp src/ConnectionHandler.cpp src/StompMessageBuilder.cpp src/StompProtocol.cpp
+	g++ -g -c -Wall -Weffc++ -std=c++11 -Iinclude -o bin/StompClient.o src/StompClient.cpp
+	g++ -g -c -Wall -Weffc++ -std=c++11 -Iinclude -o bin/event.o src/event.cpp
+	g++ -g -c -Wall -Weffc++ -std=c++11 -Iinclude -o bin/ConnectionHandler.o src/ConnectionHandler.cpp
+	g++ -g -c -Wall -Weffc++ -std=c++11 -Iinclude -o bin/StompMessageBuilder.o src/StompMessageBuilder.cpp
+	g++ -g -c -Wall -Weffc++ -std=c++11 -Iinclude -o bin/StompProtocol.o src/StompProtocol.cpp
 
-bin/event.o: src/event.cpp
-	g++ $(CFLAGS) -o bin/event.o src/event.cpp
+run:
+	./bin/StompClient
 
-bin/StompClient.o: src/StompClient.cpp
-	g++ $(CFLAGS) -o bin/StompClient.o src/StompClient.cpp
-
-.PHONY: clean
 clean:
-	rm -f bin/*
-	
+	@echo "Cleaning bin directory"
+	rm -rf bin/*
