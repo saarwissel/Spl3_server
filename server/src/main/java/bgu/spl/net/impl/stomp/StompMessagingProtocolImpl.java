@@ -131,23 +131,28 @@ public class StompMessagingProtocolImpl <T>implements StompMessagingProtocol <T>
         String idSub=headers.get("id");
         String username = connections.getLoginID().get(this.getConnectionId());
         if (!connections.getChannels().containsKey(destination)) {
-            connections.disconnect(this.getConnectionId());
-            return "ERROR\nmessage:Topic not found: " + destination + "\n^@";
-
+            String chanel = destination;
+            LinkedBlockingQueue subs = new LinkedBlockingQueue();
+            subs.add(username);
+            connections.getChannels().put(chanel, subs);
+            connections.getSubID().put(idSub, username);
+            connections.subscribeChanel(destination, username);
+            connections.getIDchannel().put(idSub, destination);
         }
         else{
-            connections.getSubID().put(idSub,username);
-            connections.subscribeChanel(destination,username);
-            connections.getIDchannel().put(idSub,destination);
-            int messageId = connections.getMessageID();
-            String message = String.format(
+        connections.getSubID().put(idSub,username);
+        connections.subscribeChanel(destination,username);
+        connections.getIDchannel().put(idSub,destination);
+        }
+        int messageId = connections.getMessageID();
+        String message = String.format(
                     "SUBSCRIBED\nid:%s\ndestination:%s\n\n^@",
                     messageId,
                     destination
             );
             return message;
         }
-    }
+    
 
         private String handleSend(Map<String, String> headers) {
         String destination = headers.get("destination");
