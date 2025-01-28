@@ -116,18 +116,49 @@ void StompProtocol::disconnect() {
 
 void StompProtocol::process(const std::string& message) {
     std::lock_guard<std::mutex> lock(protocolMutex);
-    if (message.find("MESSAGE") != std::string::npos) {
-        std::size_t idPos = message.find("message-id:");
-        if (idPos != std::string::npos) {
-            std::size_t idEnd = message.find('\n', idPos);
-            std::string messageId = message.substr(idPos + 11, idEnd - idPos - 11);
-            std::cout << "Received message with ID: " << messageId << std::endl;
+    if (message.find("CONNECTED") != std::string::npos) {
+        std::cout << "Server responded with CONNECTED. Connection established." << std::endl;
+        }    
+                   else if (message.find("MESSAGE") != std::string::npos) {
+            std::size_t subPos = message.find("subscription:");
+            std::size_t msgIdPos = message.find("message-id:");
+            std::size_t destPos = message.find("destination:");
+            std::size_t bodyStart = message.find("\n\n") + 2;
+
+            if (subPos != std::string::npos && msgIdPos != std::string::npos && destPos != std::string::npos) {
+                std::string subscription = message.substr(subPos + 13, message.find('\n', subPos) - subPos - 13);
+                std::string messageId = message.substr(msgIdPos + 11, message.find('\n', msgIdPos) - msgIdPos - 11);
+                std::string destination = message.substr(destPos + 12, message.find('\n', destPos) - destPos - 12);
+                std::string messageBody = message.substr(bodyStart);
+
+                std::cout << "MESSAGE received:" << std::endl;
+                std::cout << "Subscription ID: " << subscription << std::endl;
+                std::cout << "Message ID: " << messageId << std::endl;
+                std::cout << "Destination: " << destination << std::endl;
+                std::cout << "Message Body: " << messageBody << std::endl;
+            }
+        } 
+        else if (message.find("RECEIPT") != std::string::npos) {
+            std::size_t idPos = message.find("receipt-id:");
+            if (idPos != std::string::npos) {
+                std::string receiptId = message.substr(idPos + 11, message.find('\n', idPos) - idPos - 11);
+                std::cout << "RECEIPT received with ID: " << receiptId << std::endl;
+            }
+        } 
+        else if (message.find("ERROR") != std::string::npos) {
+            std::size_t msgPos = message.find("message:");
+            if (msgPos != std::string::npos) {
+                std::string errorMessage = message.substr(msgPos + 8, message.find('\n', msgPos) - msgPos - 8);
+                std::cerr << "ERROR received: " << errorMessage << std::endl;
+            } else {
+                std::cerr << "ERROR received: " << message << std::endl;
+            }
+        } 
+        else {
+            std::cerr << "Unknown message type received: " << message << std::endl;
         }
-        std::cout << "Processed message: " << message << std::endl;
-    } else if (message.find("ERROR") != std::string::npos) {
-        std::cerr << "Error received: " << message << std::endl;
     }
-}
+
 
 void StompProtocol::summarize(const std::string& channelName, const std::string& user, const std::string& outputFileName) {
     std::lock_guard<std::mutex> lock(protocolMutex);
