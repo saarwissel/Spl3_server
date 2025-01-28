@@ -16,6 +16,9 @@ bool StompProtocol::connect(const std::string& host, const std::string& username
 
     // Build and send CONNECT message
     std::string connectMessage = messageBuilder.buildConnectMessage(host, "7777", username, password);
+    
+    std::cout << "CONNECT message sent:\n" << connectMessage << std::endl;///check if the message is correct
+    
     connectionHandler.sendLine(connectMessage);  // Send CONNECT message
     if (!connectionHandler.sendLine(connectMessage)) {
         std::cerr << "Failed to send CONNECT message." << std::endl;
