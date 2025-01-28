@@ -74,7 +74,6 @@ public class connectionsImpl<T> implements  Connections<T> {
         ConnectionHandler handler=activeClients.get(connectionId);
         if(handler!=null){
             synchronized(handler){
-                //activeClients.get(connectionId).close();
                 String username=loginID.get(connectionId);
                 userID.remove(connectionId, username);
                 loginID.remove(username,connectionId);
