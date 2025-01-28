@@ -27,6 +27,10 @@ public class connectionsImpl<T> implements  Connections<T> {
         this.activeClients= new ConcurrentHashMap<>();
         this.channels=new ConcurrentHashMap<>();
         this.users=new ConcurrentHashMap<>();
+        this.userID=new ConcurrentHashMap<>();
+        this.loginID=new ConcurrentHashMap<>();
+        this.SubID=new ConcurrentHashMap<>();
+        this.IDchannel=new ConcurrentHashMap<>();
         method  ="";
         this.messageID=0;
     }
