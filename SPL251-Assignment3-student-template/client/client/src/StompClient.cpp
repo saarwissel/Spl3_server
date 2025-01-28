@@ -1,5 +1,5 @@
 #include "ConnectionHandler.h"
-#include "StompProtocol.cpp"
+#include "StompProtocol.h"
 #include <iostream>
 #include <thread>
 #include <atomic>
