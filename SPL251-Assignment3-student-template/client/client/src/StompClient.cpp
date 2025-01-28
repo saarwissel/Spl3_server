@@ -3,6 +3,8 @@
 #include <iostream>
 #include <thread>
 #include <atomic>
+#include "../include/event.h"
+
 
 std::atomic<bool> terminateProgram(false);
 
@@ -116,6 +118,22 @@ int main(int argc, char *argv[]) {
     }
 
     std::cout << "Logged in successfully!" << std::endl;
+
+       // קריאה לפונקציה parseEventsFile כדי לפרוס את קובץ ה-JSON ולשלוף את כל האירועים
+    names_and_events events = parseEventsFile("data/events1_partial.json");
+
+    // חזור על כל האירועים שנמצאו בקובץ
+    for (const Event& e : events.events) {
+        std::cout << "Event: " << e.get_name() << " in " << e.get_city() << std::endl;
+        std::cout << "Description: " << e.get_description() << std::endl;
+        std::cout << "Date and Time: " << e.get_date_time() << std::endl;
+
+        // אם יש צורך, תוכל לגשת למידע הכללי של האירוע
+        const std::map<std::string, std::string>& general_info = e.get_general_information();
+        for (const auto& entry : general_info) {
+            std::cout << entry.first << ": " << entry.second << std::endl;
+        }
+    }
 
     // הפעלת התרדים לאחר חיבור והתחברות תקינים
     std::thread input(inputThread, std::ref(connectionHandler), std::ref(protocol));

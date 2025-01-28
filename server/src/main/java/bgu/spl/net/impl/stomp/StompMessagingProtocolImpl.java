@@ -50,12 +50,7 @@ public class StompMessagingProtocolImpl <T>implements StompMessagingProtocol <T>
         else if(command.equals("DISCONNECT")){/////++++++++++++
             response=(T)this.handleDisconnect(headers);
         }
-        else{
-            connections.disconnect(this.getConnectionId());
-            System.out.println("Wrong messege sent , not in the protocol");
-            response= (T)"ERROR\nmessage:Invalid MESSAGE\n^@";
 
-        }
         return response;               
     }
 
@@ -136,7 +131,6 @@ public class StompMessagingProtocolImpl <T>implements StompMessagingProtocol <T>
             subs.add(username);
             connections.getChannels().put(chanel, subs);
             connections.getSubID().put(idSub, username);
-            connections.subscribeChanel(destination, username);
             connections.getIDchannel().put(idSub, destination);
         }
         else{
