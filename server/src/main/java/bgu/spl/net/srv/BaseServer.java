@@ -41,7 +41,7 @@ public abstract class BaseServer<T> implements Server<T> {
             while (!Thread.currentThread().isInterrupted()) {
 
                 Socket clientSock = serverSock.accept();
-
+                
                 int connectionId = connectionIdCounter++; // יצירת connectionId ייחודי
 
                 MessagingProtocol<T> p = protocolFactory.get();
